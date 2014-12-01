@@ -15,26 +15,28 @@ static NSString * const RMAppUUIDKey = @"RMAppUUIDKey";
 
 - (NSString *)formatLogMessage:(DDLogMessage *)logMessage
 {
-    NSString *msg = logMessage->logMsg;
+    NSString *msg = logMessage.message;
     
     NSString *logLevel;
-    switch (logMessage->logFlag)
+    switch (logMessage.flag)
     {
-        case LOG_FLAG_ERROR     : logLevel = @"11"; break;
-        case LOG_FLAG_WARN      : logLevel = @"12"; break;
-        case LOG_FLAG_INFO      : logLevel = @"14"; break;
-        case LOG_FLAG_DEBUG     : logLevel = @"15"; break;
-        case LOG_FLAG_VERBOSE   : logLevel = @"15" ; break;
+        case DDLogFlagError     : logLevel = @"11"; break;
+        case DDLogFlagWarning   : logLevel = @"12"; break;
+        case DDLogFlagInfo      : logLevel = @"14"; break;
+        case DDLogFlagDebug     : logLevel = @"15"; break;
+        case DDLogFlagVerbose   : logLevel = @"15" ; break;
         default                 : logLevel = @"15"; break;
     }
     
-    //Also display the file the logging occurred in to ease later debugging
-    NSString *file = [[[NSString stringWithUTF8String:logMessage->file] lastPathComponent] stringByDeletingPathExtension];
+    static NSDateFormatter *dateFormatter;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        dateFormatter = [[NSDateFormatter alloc] init];
+        [dateFormatter setDateFormat:@"MMM dd HH:mm:ss"];
+        [dateFormatter setTimeZone:[NSTimeZone systemTimeZone]];
+    });
     
-    NSDateFormatter *dateFormatter = [[NSDateFormatter alloc] init];
-    [dateFormatter setDateFormat:@"MMM dd HH:mm:ss"];
-    [dateFormatter setTimeZone:[NSTimeZone systemTimeZone]];
-    NSString *timestamp = [dateFormatter stringFromDate:logMessage->timestamp];
+    NSString *timestamp = [dateFormatter stringFromDate:logMessage.timestamp];
     
     //Get vendor id
     NSString *machineName = [self machineName];
@@ -42,7 +44,7 @@ static NSString * const RMAppUUIDKey = @"RMAppUUIDKey";
     //Get program name
     NSString *programName = [self programName];
     
-    NSString *log = [NSString stringWithFormat:@"<%@>%@ %@ %@: %x %@@%s@%i \"%@\"", logLevel, timestamp, machineName, programName, logMessage->machThreadID, file, logMessage->function, logMessage->lineNumber, msg];
+    NSString *log = [NSString stringWithFormat:@"<%@>%@ %@ %@: %@ %@@%@@%lu \"%@\"", logLevel, timestamp, machineName, programName, logMessage.threadID, logMessage.fileName, logMessage.function, (unsigned long)logMessage.line, msg];
     
     return log;
 }
